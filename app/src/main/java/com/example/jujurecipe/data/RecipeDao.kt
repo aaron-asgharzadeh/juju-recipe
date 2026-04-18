@@ -1,0 +1,50 @@
+package com.example.jujurecipe.data
+
+import androidx.room.*
+import kotlinx.coroutines.flow.Flow
+
+@Dao
+interface RecipeDao {
+    @Query("SELECT * FROM recipes")
+    fun getAllRecipes(): Flow<List<Recipe>>
+
+    @Transaction
+    @Query("SELECT * FROM recipes WHERE id = :recipeId")
+    suspend fun getRecipeWithIngredients(recipeId: Long): RecipeWithIngredients
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertRecipe(recipe: Recipe): Long
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertIngredients(ingredients: List<Ingredient>)
+
+    @Update
+    suspend fun updateRecipe(recipe: Recipe)
+
+    @Delete
+    suspend fun deleteRecipe(recipe: Recipe)
+
+    @Query("DELETE FROM ingredients WHERE recipeId = :recipeId")
+    suspend fun deleteIngredientsByRecipeId(recipeId: Long)
+
+    @Query("SELECT * FROM recipes WHERE isSelectedForGrocery = 1")
+    fun getSelectedRecipes(): Flow<List<Recipe>>
+
+    @Query("SELECT * FROM ingredients WHERE recipeId IN (SELECT id FROM recipes WHERE isSelectedForGrocery = 1) AND isSelectedForGrocery = 1")
+    fun getIngredientsForGrocery(): Flow<List<Ingredient>>
+
+    @Update
+    suspend fun updateIngredient(ingredient: Ingredient)
+
+    @Query("UPDATE ingredients SET isSelectedForGrocery = :isSelected WHERE id = :ingredientId")
+    suspend fun updateIngredientSelection(ingredientId: Long, isSelected: Boolean)
+}
+
+data class RecipeWithIngredients(
+    @Embedded val recipe: Recipe,
+    @Relation(
+        parentColumn = "id",
+        entityColumn = "recipeId"
+    )
+    val ingredients: List<Ingredient>
+)
