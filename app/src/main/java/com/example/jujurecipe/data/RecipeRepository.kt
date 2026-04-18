@@ -34,6 +34,7 @@ class RecipeRepository(private val recipeDao: RecipeDao) {
 
     suspend fun updateRecipeGroceryCount(recipeId: Long, count: Int) {
         recipeDao.updateRecipeGroceryCount(recipeId, count)
+        recipeDao.resetIngredientsOverride(recipeId)
     }
 
     suspend fun updateIngredientGroceryCount(ingredientId: Long, count: Int, override: Boolean) {
