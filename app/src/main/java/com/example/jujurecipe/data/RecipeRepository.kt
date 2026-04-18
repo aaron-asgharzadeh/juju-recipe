@@ -9,7 +9,7 @@ class RecipeRepository(private val recipeDao: RecipeDao) {
     
     fun getIngredientsForGrocery(): Flow<List<Ingredient>> = recipeDao.getIngredientsForGrocery()
 
-    suspend fun getRecipeWithIngredients(recipeId: Long): RecipeWithIngredients = 
+    fun getRecipeWithIngredients(recipeId: Long): Flow<RecipeWithIngredients?> =
         recipeDao.getRecipeWithIngredients(recipeId)
 
     suspend fun insertRecipe(recipe: Recipe, ingredients: List<Ingredient>) {

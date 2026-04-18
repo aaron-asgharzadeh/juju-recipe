@@ -1,5 +1,6 @@
 package com.example.jujurecipe.ui.screens
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -28,22 +29,25 @@ fun AddRecipeScreen(
     var ingredientUnit by remember { mutableStateOf("g") }
     
     val ingredients = remember { mutableStateListOf<Ingredient>() }
-    var isEditing by remember { mutableStateOf(false) }
+    var isEditingRecipe by remember { mutableStateOf(false) }
+    var editingIngredientIndex by remember { mutableStateOf<Int?>(null) }
 
     LaunchedEffect(recipeId) {
         if (recipeId != null && recipeId != -1L) {
             val recipeWithIngredients = viewModel.getRecipeWithIngredients(recipeId)
-            recipeName = recipeWithIngredients.recipe.name
-            ingredients.clear()
-            ingredients.addAll(recipeWithIngredients.ingredients)
-            isEditing = true
+            if (recipeWithIngredients != null) {
+                recipeName = recipeWithIngredients.recipe.name
+                ingredients.clear()
+                ingredients.addAll(recipeWithIngredients.ingredients)
+                isEditingRecipe = true
+            }
         }
     }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(if (isEditing) "Edit Recipe" else "Add New Recipe") },
+                title = { Text(if (isEditingRecipe) "Edit Recipe" else "Add New Recipe") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back")
@@ -66,7 +70,10 @@ fun AddRecipeScreen(
             )
 
             Spacer(modifier = Modifier.height(16.dp))
-            Text("Add Ingredient", style = MaterialTheme.typography.titleMedium)
+            Text(
+                if (editingIngredientIndex != null) "Edit Ingredient" else "Add Ingredient",
+                style = MaterialTheme.typography.titleMedium
+            )
             
             Row(verticalAlignment = Alignment.CenterVertically) {
                 OutlinedTextField(
@@ -103,24 +110,45 @@ fun AddRecipeScreen(
                 }
             }
             
-            Button(
-                onClick = {
-                    if (ingredientName.isNotBlank() && ingredientAmount.isNotBlank()) {
-                        ingredients.add(
-                            Ingredient(
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                if (editingIngredientIndex != null) {
+                    TextButton(
+                        onClick = {
+                            editingIngredientIndex = null
+                            ingredientName = ""
+                            ingredientAmount = ""
+                            ingredientUnit = "g"
+                        },
+                        modifier = Modifier.padding(top = 8.dp, end = 8.dp)
+                    ) {
+                        Text("Cancel")
+                    }
+                }
+                Button(
+                    onClick = {
+                        if (ingredientName.isNotBlank() && ingredientAmount.isNotBlank()) {
+                            val newIngredient = Ingredient(
                                 recipeId = recipeId ?: 0,
-                                name = ingredientName,
+                                name = ingredientName.trim(),
                                 amount = ingredientAmount.toDoubleOrNull() ?: 0.0,
                                 unit = ingredientUnit
                             )
-                        )
-                        ingredientName = ""
-                        ingredientAmount = ""
-                    }
-                },
-                modifier = Modifier.align(Alignment.End).padding(top = 8.dp)
-            ) {
-                Text("Add Ingredient")
+                            
+                            if (editingIngredientIndex != null) {
+                                ingredients[editingIngredientIndex!!] = newIngredient
+                                editingIngredientIndex = null
+                            } else {
+                                ingredients.add(newIngredient)
+                            }
+                            
+                            ingredientName = ""
+                            ingredientAmount = ""
+                        }
+                    },
+                    modifier = Modifier.padding(top = 8.dp)
+                ) {
+                    Text(if (editingIngredientIndex != null) "Update Ingredient" else "Add Ingredient")
+                }
             }
 
             HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
@@ -128,12 +156,27 @@ fun AddRecipeScreen(
             LazyColumn(modifier = Modifier.weight(1f)) {
                 itemsIndexed(ingredients) { index, ingredient ->
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                editingIngredientIndex = index
+                                ingredientName = ingredient.name
+                                ingredientAmount = ingredient.amount.toString()
+                                ingredientUnit = ingredient.unit
+                            }
+                            .padding(vertical = 4.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text("${ingredient.name}: ${ingredient.amount} ${ingredient.unit}")
-                        IconButton(onClick = { ingredients.removeAt(index) }) {
+                        IconButton(onClick = { 
+                            if (editingIngredientIndex == index) {
+                                editingIngredientIndex = null
+                                ingredientName = ""
+                                ingredientAmount = ""
+                            }
+                            ingredients.removeAt(index) 
+                        }) {
                             Icon(Icons.Default.Delete, contentDescription = "Remove")
                         }
                     }
@@ -143,13 +186,13 @@ fun AddRecipeScreen(
             Button(
                 onClick = {
                     if (recipeName.isNotBlank() && ingredients.isNotEmpty()) {
-                        if (isEditing && recipeId != null) {
+                        if (isEditingRecipe && recipeId != null) {
                             viewModel.updateRecipe(
-                                Recipe(id = recipeId, name = recipeName),
+                                Recipe(id = recipeId, name = recipeName.trim()),
                                 ingredients.toList()
                             )
                         } else {
-                            viewModel.addRecipe(recipeName, ingredients.toList())
+                            viewModel.addRecipe(recipeName.trim(), ingredients.toList())
                         }
                         onBack()
                     }
@@ -157,7 +200,7 @@ fun AddRecipeScreen(
                 modifier = Modifier.fillMaxWidth(),
                 enabled = recipeName.isNotBlank() && ingredients.isNotEmpty()
             ) {
-                Text(if (isEditing) "Update Recipe" else "Save Recipe")
+                Text(if (isEditingRecipe) "Update Recipe" else "Save Recipe")
             }
         }
     }

@@ -10,7 +10,7 @@ interface RecipeDao {
 
     @Transaction
     @Query("SELECT * FROM recipes WHERE id = :recipeId")
-    suspend fun getRecipeWithIngredients(recipeId: Long): RecipeWithIngredients
+    fun getRecipeWithIngredients(recipeId: Long): Flow<RecipeWithIngredients?>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertRecipe(recipe: Recipe): Long

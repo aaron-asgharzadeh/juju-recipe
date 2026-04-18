@@ -18,7 +18,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.example.jujurecipe.data.Recipe
 import com.example.jujurecipe.ui.viewmodel.RecipeViewModel
-import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -50,7 +49,7 @@ fun RecipeListScreen(
                 .fillMaxSize()
                 .padding(padding)
         ) {
-            items(recipes) { recipe ->
+            items(recipes, key = { it.id }) { recipe ->
                 RecipeItem(
                     recipe = recipe,
                     viewModel = viewModel,
@@ -72,7 +71,6 @@ fun RecipeItem(
     onDelete: () -> Unit
 ) {
     var expanded by remember { mutableStateOf(false) }
-    val scope = rememberCoroutineScope()
 
     Card(
         modifier = Modifier
@@ -108,25 +106,21 @@ fun RecipeItem(
             }
 
             AnimatedVisibility(visible = expanded) {
-                var recipeWithIngredients by remember { mutableStateOf<com.example.jujurecipe.data.RecipeWithIngredients?>(null) }
-                
-                LaunchedEffect(expanded) {
-                    if (expanded) {
-                        recipeWithIngredients = viewModel.getRecipeWithIngredients(recipe.id)
-                    }
-                }
+                val recipeWithIngredients by viewModel.getRecipeWithIngredientsFlow(recipe.id)
+                    .collectAsState(initial = null)
 
                 Column(modifier = Modifier.padding(top = 8.dp)) {
                     recipeWithIngredients?.ingredients?.forEach { ingredient ->
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp)
                         ) {
                             Checkbox(
                                 checked = ingredient.isSelectedForGrocery,
                                 onCheckedChange = { isChecked ->
                                     viewModel.updateIngredientSelection(ingredient.id, isChecked)
-                                    // Local update to UI state if needed, though Flow should handle it
                                 }
                             )
                             Text(
