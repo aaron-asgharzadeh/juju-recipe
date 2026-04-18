@@ -13,13 +13,13 @@ A simple, visually appealing Android app to manage your recipes and generate gro
 The latest version includes the **"Clear-View Update"**, fixing UI obstructions and refining the Material 3 design.
 
 ### Patch Notes (v1.3.0):
+- **Material 3 UI Polish**: Full migration to Material 3 across all screens, including a redesigned `AddRecipeScreen` with intuitive input cards and improved visual hierarchy.
 - **Improved List Visibility**: Added bottom content padding to the Recipe List to prevent Floating Action Buttons from covering item controls.
-- **Material 3 UI Polish**: Updated all screens with `ElevatedCard` components and a custom warm color palette.
 - **Navigation Transitions**: Implemented smooth animations for a more premium app feel.
 - **Version**: v1.3.0 (Build 4).
 
 ## Getting Started
-Download the `JujuRecipe_v1.3.0.apk` from the root directory to install on your Android device.
+The latest version is available in the [Releases](https://github.com/aaron-asgharzadeh/juju-recipe/releases) tab. Download the APK to install it on your Android device.
 
 ## Tech Stack
 - **Language**: Kotlin
