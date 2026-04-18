@@ -32,6 +32,10 @@ class RecipeRepository(private val recipeDao: RecipeDao) {
         recipeDao.updateRecipe(recipe.copy(isSelectedForGrocery = !recipe.isSelectedForGrocery))
     }
 
+    suspend fun updateRecipeGroceryCount(recipeId: Long, count: Int) {
+        recipeDao.updateRecipeGroceryCount(recipeId, count)
+    }
+
     suspend fun deleteRecipe(recipe: Recipe) {
         recipeDao.deleteRecipe(recipe)
     }

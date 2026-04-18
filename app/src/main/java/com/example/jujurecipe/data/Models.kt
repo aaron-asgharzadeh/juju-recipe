@@ -9,7 +9,8 @@ data class Recipe(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val name: String,
     val instructions: String = "",
-    val isSelectedForGrocery: Boolean = false
+    val isSelectedForGrocery: Boolean = false,
+    val groceryCount: Int = 1
 )
 
 @Entity(

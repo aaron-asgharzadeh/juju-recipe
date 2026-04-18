@@ -21,13 +21,26 @@ class RecipeViewModel(private val repository: RecipeRepository) : ViewModel() {
 
     val groceryIngredients: StateFlow<List<Ingredient>> = repository.getIngredientsForGrocery()
         .map { ingredients ->
+            // We need to fetch the recipes to get their groceryCount
+            // However, getIngredientsForGrocery DAO query already filters for selected recipes.
+            // But Ingredient doesn't have groceryCount. 
+            // It might be better to adjust the DAO query or join with recipes.
+            // For now, I'll fetch recipes and multiply.
+            val selectedRecipes = repository.getSelectedRecipes().first()
+            val recipeMap = selectedRecipes.associateBy { it.id }
+
             ingredients.groupBy { it.name.lowercase() + it.unit.lowercase() }
                 .map { (_, group) ->
+                    val first = group.first()
+                    val totalAmount = group.sumOf { ingredient ->
+                        val count = recipeMap[ingredient.recipeId]?.groceryCount ?: 1
+                        ingredient.amount * count
+                    }
                     Ingredient(
-                        name = group.first().name,
-                        amount = group.sumOf { it.amount },
-                        unit = group.first().unit,
-                        recipeId = 0 // Not relevant for combined list
+                        name = first.name,
+                        amount = totalAmount,
+                        unit = first.unit,
+                        recipeId = 0
                     )
                 }
         }
@@ -54,6 +67,12 @@ class RecipeViewModel(private val repository: RecipeRepository) : ViewModel() {
     fun toggleRecipeSelection(recipe: Recipe) {
         viewModelScope.launch {
             repository.toggleRecipeSelection(recipe)
+        }
+    }
+
+    fun updateRecipeGroceryCount(recipeId: Long, count: Int) {
+        viewModelScope.launch {
+            repository.updateRecipeGroceryCount(recipeId, count)
         }
     }
 

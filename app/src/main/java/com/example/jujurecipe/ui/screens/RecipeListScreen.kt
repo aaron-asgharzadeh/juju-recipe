@@ -93,6 +93,30 @@ fun RecipeItem(
                         onCheckedChange = { onToggleSelection() }
                     )
                     Text("Add")
+                    
+                    if (recipe.isSelectedForGrocery) {
+                        var menuExpanded by remember { mutableStateOf(false) }
+                        Box(modifier = Modifier.padding(horizontal = 4.dp)) {
+                            TextButton(onClick = { menuExpanded = true }) {
+                                Text("x${recipe.groceryCount}")
+                            }
+                            DropdownMenu(
+                                expanded = menuExpanded,
+                                onDismissRequest = { menuExpanded = false }
+                            ) {
+                                (1..10).forEach { count ->
+                                    DropdownMenuItem(
+                                        text = { Text(count.toString()) },
+                                        onClick = {
+                                            viewModel.updateRecipeGroceryCount(recipe.id, count)
+                                            menuExpanded = false
+                                        }
+                                    )
+                                }
+                            }
+                        }
+                    }
+
                     IconButton(onClick = onEdit) {
                         Icon(Icons.Default.Edit, contentDescription = "Edit")
                     }
