@@ -29,6 +29,31 @@ fun RecipeListScreen(
 ) {
     val recipes by viewModel.allRecipes.collectAsState()
 
+    var showDeleteDialog by remember { mutableStateOf<Recipe?>(null) }
+
+    if (showDeleteDialog != null) {
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = null },
+            title = { Text("Delete Recipe") },
+            text = { Text("Are you sure you want to delete '${showDeleteDialog?.name}'?") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showDeleteDialog?.let { viewModel.deleteRecipe(it) }
+                        showDeleteDialog = null
+                    }
+                ) {
+                    Text("Delete", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteDialog = null }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(title = { Text("My Recipes") })
@@ -55,7 +80,7 @@ fun RecipeListScreen(
                     viewModel = viewModel,
                     onToggleSelection = { viewModel.toggleRecipeSelection(recipe) },
                     onEdit = { onEditRecipeClick(recipe.id) },
-                    onDelete = { viewModel.deleteRecipe(recipe) }
+                    onDelete = { showDeleteDialog = recipe }
                 )
             }
         }
@@ -94,25 +119,23 @@ fun RecipeItem(
                     )
                     Text("Add")
                     
-                    if (recipe.isSelectedForGrocery) {
-                        var menuExpanded by remember { mutableStateOf(false) }
-                        Box(modifier = Modifier.padding(horizontal = 4.dp)) {
-                            TextButton(onClick = { menuExpanded = true }) {
-                                Text("x${recipe.groceryCount}")
-                            }
-                            DropdownMenu(
-                                expanded = menuExpanded,
-                                onDismissRequest = { menuExpanded = false }
-                            ) {
-                                (1..10).forEach { count ->
-                                    DropdownMenuItem(
-                                        text = { Text(count.toString()) },
-                                        onClick = {
-                                            viewModel.updateRecipeGroceryCount(recipe.id, count)
-                                            menuExpanded = false
-                                        }
-                                    )
-                                }
+                    var menuExpanded by remember { mutableStateOf(false) }
+                    Box(modifier = Modifier.padding(horizontal = 4.dp)) {
+                        TextButton(onClick = { menuExpanded = true }) {
+                            Text("x${recipe.groceryCount}")
+                        }
+                        DropdownMenu(
+                            expanded = menuExpanded,
+                            onDismissRequest = { menuExpanded = false }
+                        ) {
+                            (1..10).forEach { count ->
+                                DropdownMenuItem(
+                                    text = { Text(count.toString()) },
+                                    onClick = {
+                                        viewModel.updateRecipeGroceryCount(recipe.id, count)
+                                        menuExpanded = false
+                                    }
+                                )
                             }
                         }
                     }
@@ -152,6 +175,38 @@ fun RecipeItem(
                                 style = MaterialTheme.typography.bodyMedium,
                                 modifier = Modifier.weight(1f)
                             )
+                            
+                            var menuExpanded by remember { mutableStateOf(false) }
+                            Box {
+                                TextButton(onClick = { menuExpanded = true }) {
+                                    val displayCount = if (ingredient.overrideGroceryCount) ingredient.groceryCount else recipe.groceryCount
+                                    Text(
+                                        text = "x$displayCount",
+                                        color = if (ingredient.overrideGroceryCount) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                                    )
+                                }
+                                DropdownMenu(
+                                    expanded = menuExpanded,
+                                    onDismissRequest = { menuExpanded = false }
+                                ) {
+                                    DropdownMenuItem(
+                                        text = { Text("Use Recipe Default") },
+                                        onClick = {
+                                            viewModel.updateIngredientGroceryCount(ingredient.id, 1, false)
+                                            menuExpanded = false
+                                        }
+                                    )
+                                    (1..10).forEach { count ->
+                                        DropdownMenuItem(
+                                            text = { Text(count.toString()) },
+                                            onClick = {
+                                                viewModel.updateIngredientGroceryCount(ingredient.id, count, true)
+                                                menuExpanded = false
+                                            }
+                                        )
+                                    }
+                                }
+                            }
                         }
                     }
                     

@@ -40,6 +40,9 @@ interface RecipeDao {
     suspend fun updateIngredientSelection(ingredientId: Long, isSelected: Boolean)
     @Query("UPDATE recipes SET groceryCount = :count WHERE id = :recipeId")
     suspend fun updateRecipeGroceryCount(recipeId: Long, count: Int)
+
+    @Query("UPDATE ingredients SET groceryCount = :count, overrideGroceryCount = :override WHERE id = :ingredientId")
+    suspend fun updateIngredientGroceryCount(ingredientId: Long, count: Int, override: Boolean)
 }
 
 data class RecipeWithIngredients(

@@ -33,7 +33,12 @@ class RecipeViewModel(private val repository: RecipeRepository) : ViewModel() {
                 .map { (_, group) ->
                     val first = group.first()
                     val totalAmount = group.sumOf { ingredient ->
-                        val count = recipeMap[ingredient.recipeId]?.groceryCount ?: 1
+                        val recipe = recipeMap[ingredient.recipeId]
+                        val count = if (ingredient.overrideGroceryCount) {
+                            ingredient.groceryCount
+                        } else {
+                            recipe?.groceryCount ?: 1
+                        }
                         ingredient.amount * count
                     }
                     Ingredient(
@@ -73,6 +78,12 @@ class RecipeViewModel(private val repository: RecipeRepository) : ViewModel() {
     fun updateRecipeGroceryCount(recipeId: Long, count: Int) {
         viewModelScope.launch {
             repository.updateRecipeGroceryCount(recipeId, count)
+        }
+    }
+
+    fun updateIngredientGroceryCount(ingredientId: Long, count: Int, override: Boolean) {
+        viewModelScope.launch {
+            repository.updateIngredientGroceryCount(ingredientId, count, override)
         }
     }
 

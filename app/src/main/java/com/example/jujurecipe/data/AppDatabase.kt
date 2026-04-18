@@ -5,13 +5,20 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 
-@Database(entities = [Recipe::class, Ingredient::class], version = 4, exportSchema = false)
+@Database(entities = [Recipe::class, Ingredient::class], version = 5, exportSchema = false)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun recipeDao(): RecipeDao
 
     companion object {
         @Volatile
         private var Instance: AppDatabase? = null
+
+        private val MIGRATION_4_5 = object : androidx.room.migration.Migration(4, 5) {
+            override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE ingredients ADD COLUMN groceryCount INTEGER NOT NULL DEFAULT 1")
+                db.execSQL("ALTER TABLE ingredients ADD COLUMN overrideGroceryCount INTEGER NOT NULL DEFAULT 0")
+            }
+        }
 
         private val MIGRATION_3_4 = object : androidx.room.migration.Migration(3, 4) {
             override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
@@ -22,7 +29,7 @@ abstract class AppDatabase : RoomDatabase() {
         fun getDatabase(context: Context): AppDatabase {
             return Instance ?: synchronized(this) {
                 Room.databaseBuilder(context, AppDatabase::class.java, "recipe_database")
-                    .addMigrations(MIGRATION_2_3, MIGRATION_3_4)
+                    .addMigrations(MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
                     .build()
                     .also { Instance = it }
             }

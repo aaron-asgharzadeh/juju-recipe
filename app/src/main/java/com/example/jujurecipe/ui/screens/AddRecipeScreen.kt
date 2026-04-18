@@ -87,7 +87,8 @@ fun AddRecipeScreen(
                     value = ingredientAmount,
                     onValueChange = { ingredientAmount = it },
                     label = { Text("Amount") },
-                    modifier = Modifier.width(80.dp)
+                    modifier = Modifier.width(100.dp),
+                    singleLine = true
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 

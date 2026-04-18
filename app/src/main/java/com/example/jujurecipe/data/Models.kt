@@ -30,5 +30,7 @@ data class Ingredient(
     val name: String,
     val amount: Double,
     val unit: String, // "g", "pcs", "ml", etc.
-    val isSelectedForGrocery: Boolean = true
+    val isSelectedForGrocery: Boolean = true,
+    val groceryCount: Int = 1,
+    val overrideGroceryCount: Boolean = false
 )
