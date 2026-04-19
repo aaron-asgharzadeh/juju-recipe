@@ -44,4 +44,6 @@ class RecipeRepository(private val recipeDao: RecipeDao) {
     suspend fun deleteRecipe(recipe: Recipe) {
         recipeDao.deleteRecipe(recipe)
     }
+
+    fun getAllIngredientNames(): Flow<List<String>> = recipeDao.getAllIngredientNames()
 }

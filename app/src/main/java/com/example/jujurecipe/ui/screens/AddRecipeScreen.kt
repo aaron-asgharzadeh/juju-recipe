@@ -1,5 +1,7 @@
 package com.example.jujurecipe.ui.screens
 
+import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -8,14 +10,18 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Restaurant
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.PopupProperties
 import com.example.jujurecipe.data.Ingredient
 import com.example.jujurecipe.data.Recipe
 import com.example.jujurecipe.ui.viewmodel.RecipeViewModel
@@ -27,6 +33,9 @@ fun AddRecipeScreen(
     recipeId: Long? = null,
     onBack: () -> Unit
 ) {
+    val draft by viewModel.recipeDraft.collectAsState()
+    val allIngredientNames by viewModel.allIngredientNames.collectAsState()
+
     var recipeName by remember { mutableStateOf("") }
     var ingredientName by remember { mutableStateOf("") }
     var ingredientAmount by remember { mutableStateOf("") }
@@ -36,15 +45,130 @@ fun AddRecipeScreen(
     var isEditingRecipe by remember { mutableStateOf(false) }
     var editingIngredientIndex by remember { mutableStateOf<Int?>(null) }
 
+    val nameFocusRequester = remember { FocusRequester() }
+    val amountFocusRequester = remember { FocusRequester() }
+    var showBackDialog by remember { mutableStateOf(false) }
+    var showClearDialog by remember { mutableStateOf(false) }
+    var ingredientToDeleteIndex by remember { mutableStateOf<Int?>(null) }
+
+    // Logic to prevent suggestion on backspace
+    var isDeleteAction by remember { mutableStateOf(false) }
+
+    var existingRecipe by remember { mutableStateOf<Recipe?>(null) }
+
+    // Initialize from draft or database
     LaunchedEffect(recipeId) {
         if (recipeId != null && recipeId != -1L) {
             val recipeWithIngredients = viewModel.getRecipeWithIngredients(recipeId)
             if (recipeWithIngredients != null) {
+                existingRecipe = recipeWithIngredients.recipe
                 recipeName = recipeWithIngredients.recipe.name
                 ingredients.clear()
                 ingredients.addAll(recipeWithIngredients.ingredients)
                 isEditingRecipe = true
             }
+        } else if (draft != null) {
+            recipeName = draft!!.name
+            ingredients.clear()
+            ingredients.addAll(draft!!.ingredients)
+            ingredientName = draft!!.currentIngredientName
+            ingredientAmount = draft!!.currentIngredientAmount
+            ingredientUnit = draft!!.currentIngredientUnit
+        }
+    }
+
+    // Update draft whenever state changes with debouncing to prevent UI lag
+    LaunchedEffect(recipeName, ingredients.size, ingredientName, ingredientAmount, ingredientUnit) {
+        kotlinx.coroutines.delay(300L) // Debounce draft saving
+        viewModel.saveDraft(recipeName, ingredients.toList(), ingredientName, ingredientAmount, ingredientUnit)
+    }
+
+    BackHandler {
+        if (recipeName.isNotBlank() || ingredients.isNotEmpty() || ingredientName.isNotBlank()) {
+            showBackDialog = true
+        } else {
+            onBack()
+        }
+    }
+
+    if (showBackDialog) {
+        AlertDialog(
+            onDismissRequest = { showBackDialog = false },
+            title = { Text("Save Draft?") },
+            text = { Text("Do you want to save your progress as a draft or discard it?") },
+            confirmButton = {
+                TextButton(onClick = {
+                    showBackDialog = false
+                    onBack()
+                }) {
+                    Text("Save")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    viewModel.clearDraft()
+                    showBackDialog = false
+                    onBack()
+                }) {
+                    Text("Discard", color = MaterialTheme.colorScheme.error)
+                }
+            }
+        )
+    }
+
+    if (showClearDialog) {
+        AlertDialog(
+            onDismissRequest = { showClearDialog = false },
+            title = { Text("Clear All?") },
+            text = { Text("Are you sure you want to clear the entire recipe?") },
+            confirmButton = {
+                TextButton(onClick = {
+                    recipeName = ""
+                    ingredients.clear()
+                    ingredientName = ""
+                    ingredientAmount = ""
+                    ingredientUnit = "g"
+                    viewModel.clearDraft()
+                    showClearDialog = false
+                }) {
+                    Text("Clear")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showClearDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+    if (ingredientToDeleteIndex != null) {
+        val ingredient = ingredients.getOrNull(ingredientToDeleteIndex!!)
+        if (ingredient != null) {
+            AlertDialog(
+                onDismissRequest = { ingredientToDeleteIndex = null },
+                title = { Text("Remove Ingredient") },
+                text = { Text("Are you sure you want to remove '${ingredient.name}'?") },
+                confirmButton = {
+                    TextButton(onClick = {
+                        val index = ingredientToDeleteIndex!!
+                        if (editingIngredientIndex == index) {
+                            editingIngredientIndex = null
+                            ingredientName = ""
+                            ingredientAmount = ""
+                        }
+                        ingredients.removeAt(index)
+                        ingredientToDeleteIndex = null
+                    }) {
+                        Text("Remove", color = MaterialTheme.colorScheme.error)
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { ingredientToDeleteIndex = null }) {
+                        Text("Cancel")
+                    }
+                }
+            )
         }
     }
 
@@ -59,8 +183,19 @@ fun AddRecipeScreen(
                     }
                 },
                 navigationIcon = {
-                    IconButton(onClick = onBack) {
+                    IconButton(onClick = {
+                        if (recipeName.isNotBlank() || ingredients.isNotEmpty() || ingredientName.isNotBlank()) {
+                            showBackDialog = true
+                        } else {
+                            onBack()
+                        }
+                    }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    }
+                },
+                actions = {
+                    IconButton(onClick = { showClearDialog = true }) {
+                        Icon(Icons.Default.Clear, contentDescription = "Clear All")
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -103,14 +238,49 @@ fun AddRecipeScreen(
                     )
                     Spacer(modifier = Modifier.height(12.dp))
 
-                    OutlinedTextField(
-                        value = ingredientName,
-                        onValueChange = { ingredientName = it },
-                        label = { Text("Ingredient Name") },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
-                        singleLine = true
-                    )
+                    // Autosuggestion Dropdown Logic
+                    val suggestions = if (!isDeleteAction && ingredientName.length >= 2) {
+                        allIngredientNames.filter { 
+                            it.contains(ingredientName, ignoreCase = true) && !it.equals(ingredientName, ignoreCase = true)
+                        }
+                    } else emptyList()
+
+                    ExposedDropdownMenuBox(
+                        expanded = suggestions.isNotEmpty(),
+                        onExpandedChange = { }
+                    ) {
+                        OutlinedTextField(
+                            value = ingredientName,
+                            onValueChange = {
+                                isDeleteAction = it.length < ingredientName.length
+                                ingredientName = it
+                            },
+                            label = { Text("Ingredient Name") },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .focusRequester(nameFocusRequester)
+                                .menuAnchor(type = ExposedDropdownMenuAnchorType.PrimaryEditable, enabled = true),
+                            shape = RoundedCornerShape(12.dp),
+                            singleLine = true
+                        )
+
+                        ExposedDropdownMenu(
+                            expanded = suggestions.isNotEmpty(),
+                            onDismissRequest = { },
+                            modifier = Modifier.background(MaterialTheme.colorScheme.surface)
+                        ) {
+                            suggestions.take(5).forEach { suggestion ->
+                                DropdownMenuItem(
+                                    text = { Text(suggestion) },
+                                    onClick = {
+                                        ingredientName = suggestion
+                                        isDeleteAction = false
+                                        amountFocusRequester.requestFocus()
+                                    }
+                                )
+                            }
+                        }
+                    }
 
                     Spacer(modifier = Modifier.height(8.dp))
 
@@ -119,7 +289,9 @@ fun AddRecipeScreen(
                             value = ingredientAmount,
                             onValueChange = { ingredientAmount = it },
                             label = { Text("Amount") },
-                            modifier = Modifier.weight(1f),
+                            modifier = Modifier
+                                .weight(1f)
+                                .focusRequester(amountFocusRequester),
                             shape = RoundedCornerShape(12.dp),
                             singleLine = true
                         )
@@ -184,6 +356,7 @@ fun AddRecipeScreen(
 
                                     ingredientName = ""
                                     ingredientAmount = ""
+                                    nameFocusRequester.requestFocus()
                                 }
                             },
                             shape = RoundedCornerShape(12.dp)
@@ -218,6 +391,7 @@ fun AddRecipeScreen(
                                 ingredientName = ingredient.name
                                 ingredientAmount = ingredient.amount.toString()
                                 ingredientUnit = ingredient.unit
+                                amountFocusRequester.requestFocus()
                             },
                         shape = RoundedCornerShape(12.dp)
                     ) {
@@ -241,12 +415,7 @@ fun AddRecipeScreen(
                                 )
                             }
                             IconButton(onClick = {
-                                if (editingIngredientIndex == index) {
-                                    editingIngredientIndex = null
-                                    ingredientName = ""
-                                    ingredientAmount = ""
-                                }
-                                ingredients.removeAt(index)
+                                ingredientToDeleteIndex = index
                             }) {
                                 Icon(
                                     Icons.Default.Delete,
@@ -263,13 +432,16 @@ fun AddRecipeScreen(
                 onClick = {
                     if (recipeName.isNotBlank() && ingredients.isNotEmpty()) {
                         if (isEditingRecipe && recipeId != null) {
+                            val recipeToUpdate = existingRecipe?.copy(name = recipeName.trim()) 
+                                ?: Recipe(id = recipeId, name = recipeName.trim())
                             viewModel.updateRecipe(
-                                Recipe(id = recipeId, name = recipeName.trim()),
+                                recipeToUpdate,
                                 ingredients.toList()
                             )
                         } else {
                             viewModel.addRecipe(recipeName.trim(), ingredients.toList())
                         }
+                        viewModel.clearDraft()
                         onBack()
                     }
                 },

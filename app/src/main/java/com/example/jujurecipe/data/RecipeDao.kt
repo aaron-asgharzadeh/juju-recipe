@@ -46,6 +46,9 @@ interface RecipeDao {
 
     @Query("UPDATE ingredients SET groceryCount = :count, overrideGroceryCount = :override WHERE id = :ingredientId")
     suspend fun updateIngredientGroceryCount(ingredientId: Long, count: Int, override: Boolean)
+
+    @Query("SELECT DISTINCT name FROM ingredients ORDER BY name ASC")
+    fun getAllIngredientNames(): Flow<List<String>>
 }
 
 data class RecipeWithIngredients(

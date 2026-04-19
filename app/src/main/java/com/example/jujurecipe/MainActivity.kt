@@ -42,7 +42,14 @@ fun RecipeApp(viewModelFactory: RecipeViewModelFactory) {
     val navController = rememberNavController()
     val viewModel: RecipeViewModel = viewModel(factory = viewModelFactory)
 
-    NavHost(navController = navController, startDestination = "recipe_list") {
+    NavHost(
+        navController = navController,
+        startDestination = "recipe_list",
+        enterTransition = { androidx.compose.animation.EnterTransition.None },
+        exitTransition = { androidx.compose.animation.ExitTransition.None },
+        popEnterTransition = { androidx.compose.animation.EnterTransition.None },
+        popExitTransition = { androidx.compose.animation.ExitTransition.None }
+    ) {
         composable("recipe_list") {
             RecipeListScreen(
                 viewModel = viewModel,
