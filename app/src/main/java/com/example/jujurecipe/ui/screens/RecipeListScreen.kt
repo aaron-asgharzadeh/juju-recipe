@@ -54,18 +54,30 @@ fun RecipeListScreen(
 
     Scaffold(
         topBar = {
-            CenterAlignedTopAppBar(
-                title = {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.Restaurant, contentDescription = null, modifier = Modifier.size(24.dp))
-                        Spacer(Modifier.width(8.dp))
-                        Text("My Recipes", fontWeight = FontWeight.Bold)
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface
+            Column {
+                CenterAlignedTopAppBar(
+                    title = {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.Restaurant, contentDescription = null, modifier = Modifier.size(24.dp))
+                            Spacer(Modifier.width(8.dp))
+                            Text("Juju Recipe", fontWeight = FontWeight.Bold)
+                        }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.surface
+                    )
                 )
-            )
+                Text(
+                    text = "Your Kitchen Assistant",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 8.dp),
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                )
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+            }
         },
         floatingActionButton = {
             Column(horizontalAlignment = Alignment.End) {
